@@ -5,8 +5,6 @@ package com.company;
  * Class to hold the data abount a Venue -- a place
  */
 public class Venue {
-    private String name;
-
     public String getName() {
         return name;
     }
@@ -31,12 +29,12 @@ public class Venue {
         this.description = description;
     }
 
-    public String getUrl() {
-        return url;
+    public String getVenueUrl() {
+        return venueUrl;
     }
 
-    public void setUrl(String url) {
-        this.url = url;
+    public void setVenueUrl(String venueUrl) {
+        this.venueUrl = venueUrl;
     }
 
     public String getWorkTime() {
@@ -47,9 +45,10 @@ public class Venue {
         this.workTime = workTime;
     }
 
+    private String name;
     private String address;
     private String description;
-    private String url;
+    private String venueUrl;
     private String workTime;
 
     public Venue(){
@@ -60,7 +59,7 @@ public class Venue {
         this.name = name;
         this.address = address;
         this.description = description;
-        this.url = url;
+        this.venueUrl = url;
         this.workTime = workTime;
     }
 

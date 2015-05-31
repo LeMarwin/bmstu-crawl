@@ -4,6 +4,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Attribute;
+import org.jsoup.select.Elements;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -34,16 +35,27 @@ public class Crawler {
     private List<Event> events = new ArrayList<Event>();
     private String mainDomain = "http://ponominalu.ru";
 
-    public void crawlCategory(String cat)
-    {
+    public void crawlCategory(String cat, Integer pages) {
         Document doc = null;
-
-        try {
-            doc = Jsoup.connect(mainDomain + "/category/" + cat).timeout(10000).get();
-        } catch (IOException e) {
-            e.printStackTrace();
+        for (Integer pageCount = 1; pageCount <= pages; pageCount++)
+        {
+            try {
+                doc = Jsoup.connect(mainDomain + "/category/" + cat + "?page=" + pageCount.toString()).timeout(10000).get();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
-
+        assert doc != null;
+        Elements venueNodes = doc.select(".eventVenue > a");
+        Elements eventNodes = doc.select(".eventTitle > a");
+        for(Element el : venueNodes)
+        {
+            parseVenue(mainDomain + el.attr("href"));
+        }
+        for(Element el : eventNodes)
+        {
+            parseEvent(mainDomain + el.attr("href"),cat);
+        }
     }
 
     public void parseEvent(String url, String category)
@@ -69,6 +81,44 @@ public class Crawler {
             venue = venueNode.attr("title");
             venueURL = mainDomain+venueNode.attr("href");
             events.add(new Event(name, url, time, venue, venueURL, category));
+        }
+    }
+
+    public void parseVenue(String url)
+    {
+        if(!visitedVenues.contains(url))
+        {
+            Document doc;
+            try {
+                doc = Jsoup.connect(url).get();
+            } catch (IOException e) {
+                e.printStackTrace();
+                return;
+            }
+            visitedVenues.add(url);
+
+            String name;
+            String address;
+            String description;
+            String workTime;
+
+            Elements wt = doc.select("[id=vremya_raboti]");
+            Elements desc = doc.select("div.content[itemprop=description]");
+            if(!wt.isEmpty()) {
+                workTime = wt.first().text();
+            }
+            else {
+                workTime = "Время работы не указано";
+            }
+            if(!desc.isEmpty()) {
+                description = desc.first().text();
+            }
+            else {
+                description = "Нет описания";
+            }
+            address = doc.select("span[itemprop=streetAddress]").first().text().replace("Адрес: ","");
+            name = doc.select("article.venuePage > h1").text().replace("Билеты в ","");
+            venues.add(new Venue(name, address, description, url, workTime));
         }
     }
 }
