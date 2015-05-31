@@ -9,31 +9,44 @@ import java.time.LocalDateTime;
 public class Event {
 
     private String name;
+
+    public LocalDateTime getTime() {
+        return time;
+    }
+
     private LocalDateTime time;
     private String venue;
     private String venueURL;
     private Category category;
+    private String eventURL;
 
     public Event(){
 
     }
 
-    public Event(String name, LocalDateTime time, String venue, String venueURL, Category category){
+    public Event(String name, String eventURL, LocalDateTime time, String venue, String venueURL, Category category){
         this.name = name;
+        this.eventURL = eventURL;
         this.time = time;
         this.venue = venue;
-        this.venueURL = venue;
+        this.venueURL = venueURL;
         this.category = category;
     }
 
-    public Event(String name, LocalDateTime time, String venue, String venueURL, String category)
+    public Event(String name, String eventURL, LocalDateTime time, String venue, String venueURL, String category)
     {
         this.name = name;
+        this.eventURL = eventURL;
         this.time = time;
         this.venue = venue;
-        this.venueURL = venue;
+        this.venueURL = venueURL;
         this.category = Event.categoryFromString(category);
     }
+
+    public String getEventURL() {
+        return eventURL;
+    }
+
 
     public enum Category{
         CONCERT, THEATRE, SPORT, FESTIVAL, NONE
@@ -57,7 +70,7 @@ public class Event {
     }
 
     public String getVenue() {
-        return name;
+        return venue;
     }
 
     public String getVenueURL() {
