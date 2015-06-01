@@ -6,6 +6,7 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StringField;
+import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.store.Directory;
@@ -30,15 +31,26 @@ public class Lucene {
 
     private String baseFolder;
 
-    private IndexWriter getIndexWriter(String subfolder) throws IOException {
-        Directory indexDir = FSDirectory.open(new File(baseFolder+subfolder).toPath());
-        IndexWriterConfig config = new IndexWriterConfig(new StandardAnalyzer());
-        return new IndexWriter(indexDir, config);
+
+    private IndexWriter indexWriter = null;
+
+    public IndexWriter getIndexWriter(boolean create, String subfolder) throws IOException {
+        if (indexWriter == null) {
+            Directory indexDir = FSDirectory.open(new File(baseFolder + subfolder + "/index/").toPath());
+            IndexWriterConfig config = new IndexWriterConfig(new StandardAnalyzer());
+            indexWriter = new IndexWriter(indexDir, config);
+        }
+        return indexWriter;
+    }
+
+    public void closeIndexWriter() throws IOException {
+        if (indexWriter != null) {
+            indexWriter.close();
+        }
     }
 
     public void buildIndexes(String subfolder) throws IOException {
-        IndexWriter indexWriter = getIndexWriter(subfolder);
-        JsonParser jsonParser = new JsonParser();
+        indexWriter = getIndexWriter(true,subfolder);
         File dir = new File(baseFolder+subfolder);
         File[] files = dir.listFiles();
         if(files!=null) {
@@ -57,11 +69,12 @@ public class Lucene {
         } else {
             System.out.println("No files found");
         }
-        indexWriter.close();
+        closeIndexWriter();
     }
 
     public void indexObject(IndexWriter indexWriter, JSONObject jsonObject) throws JSONException, IOException {
         Document doc = new Document();
+        String fullSearchableText = "";
         for(int i = 0; i<jsonObject.names().length();i++)
         {
             String key = jsonObject.names().getString(i);
@@ -69,13 +82,18 @@ public class Lucene {
             String value;
             if(key.equals("time")) {
                 value = deserializeLDT((JSONObject) object);            //Да, это ужасно и так делать нельзя
+                fullSearchableText = fullSearchableText + " " + value;
             }
             else {
                 value = (String) object;                                //Но если очень надо...
+                if(!key.equals("description")) {
+                    fullSearchableText = fullSearchableText + value;
+                }
             }
             doc.add(new StringField(key, value, Field.Store.YES));
             System.out.println(key + "\t" + value);
         }
+        doc.add(new TextField("content",fullSearchableText,Field.Store.NO));
         indexWriter.addDocument(doc);
     }
 
