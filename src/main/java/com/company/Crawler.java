@@ -1,12 +1,16 @@
 package com.company;
 
+import com.google.gson.Gson;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Attribute;
 import org.jsoup.select.Elements;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,43 +27,68 @@ public class Crawler {
     private List<String> visitedVenues = new ArrayList<String>();
     private List<String> visitedEvents = new ArrayList<String>();
 
-    public List<Venue> getVenues() {
-        return venues;
-    }
+    Integer venueCount = 0;
+    Integer eventCount = 0;
 
-    public List<Event> getEvents() {
-        return events;
-    }
-
-    private List<Venue> venues = new ArrayList<Venue>();
-    private List<Event> events = new ArrayList<Event>();
     private String mainDomain = "http://ponominalu.ru";
 
-    public void crawlCategory(String cat, Integer pages) {
+    public void crawlCategory(String cat, Integer pages, String outputFolder) {
+        new File(outputFolder + "/venues/").mkdirs();
+        new File(outputFolder + "/events/").mkdirs();
         Document doc = null;
-        for (Integer pageCount = 1; pageCount <= pages; pageCount++)
-        {
+        for (Integer pageCount = 1; pageCount <= pages; pageCount++) {
             try {
                 doc = Jsoup.connect(mainDomain + "/category/" + cat + "?page=" + pageCount.toString()).timeout(10000).get();
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        }
-        assert doc != null;
-        Elements venueNodes = doc.select(".eventVenue > a");
-        Elements eventNodes = doc.select(".eventTitle > a");
-        for(Element el : venueNodes)
-        {
-            parseVenue(mainDomain + el.attr("href"));
-        }
-        for(Element el : eventNodes)
-        {
-            parseEvent(mainDomain + el.attr("href"),cat);
+            Elements venueNodes = null;
+            if (doc != null) {
+                venueNodes = doc.select(".eventVenue > a");
+                Elements eventNodes = doc.select(".eventTitle > a");
+                Gson gson = new Gson();
+                for (Element el : venueNodes) {
+                    Venue venue = parseVenue(mainDomain + el.attr("href"));
+                    if (venue != null) {
+                        try {
+                            PrintWriter writer = new PrintWriter(outputFolder +
+                                    "/venues/" + venueCount.toString() + ".json", "UTF-8");
+                            writer.println(gson.toJson(venue));
+                            writer.close();
+                            venueCount++;
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+                for (Element el : eventNodes) {
+                    Event event = parseEvent(mainDomain + el.attr("href"), cat);
+                    if (event != null) {
+                        try {
+                            PrintWriter writer = new PrintWriter(outputFolder +
+                                    "/events/" + eventCount.toString() + ".json", "UTF-8");
+                            writer.println(gson.toJson(event));
+                            writer.close();
+                            eventCount++;
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
         }
     }
 
-    public void parseEvent(String url, String category)
+    public void crawlMultiple(List<String> categories, Integer pages, String outputFolder)
     {
+        for(String cat : categories)
+        {
+            this.crawlCategory(cat,pages,outputFolder);
+        }
+    }
+    public Event parseEvent(String url, String category)
+    {
+        Event res = null;
         if(!visitedEvents.contains(url))
         {
             Document doc;
@@ -67,7 +96,7 @@ public class Crawler {
                 doc = Jsoup.connect(url).get();
             } catch (IOException e) {
                 e.printStackTrace();
-                return;
+                return null;
             }
             visitedEvents.add(url);
             String name;
@@ -80,12 +109,15 @@ public class Crawler {
             time = LocalDateTime.parse(doc.select("time[itemprop=startDate]").first().attr("datetime"));
             venue = venueNode.attr("title");
             venueURL = mainDomain+venueNode.attr("href");
-            events.add(new Event(name, url, time, venue, venueURL, category));
+            System.out.println(eventCount.toString() + "\tParsed event: " + name);
+            res = new Event(name, url, time, venue, venueURL, category);
         }
+        return res;
     }
 
-    public void parseVenue(String url)
+    public Venue parseVenue(String url)
     {
+        Venue res = null;
         if(!visitedVenues.contains(url))
         {
             Document doc;
@@ -93,7 +125,7 @@ public class Crawler {
                 doc = Jsoup.connect(url).get();
             } catch (IOException e) {
                 e.printStackTrace();
-                return;
+                return null;
             }
             visitedVenues.add(url);
 
@@ -118,7 +150,9 @@ public class Crawler {
             }
             address = doc.select("span[itemprop=streetAddress]").first().text().replace("Адрес: ","");
             name = doc.select("article.venuePage > h1").text().replace("Билеты в ","");
-            venues.add(new Venue(name, address, description, url, workTime));
+            System.out.println(venueCount.toString() + "\tParsed venue: " + name);
+            res = new Venue(name, address, description, url, workTime);
         }
+        return res;
     }
 }
