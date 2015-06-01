@@ -19,21 +19,20 @@ import java.io.IOException;
  * Index building via Lucene framework
  */
 public class Lucene {
-    public Lucene() {
-
+    public Lucene(String baseFolder) {
+        this.baseFolder = baseFolder;
     }
 
-    private IndexWriter indexWriter = null;
     private String baseFolder;
 
-    public Lucene(String baseFolder) throws IOException {
-        Directory indexDir = FSDirectory.open(new File(baseFolder).toPath());
+    private IndexWriter getIndexWriter(String subfolder) throws IOException {
+        Directory indexDir = FSDirectory.open(new File(baseFolder+subfolder).toPath());
         IndexWriterConfig config = new IndexWriterConfig(new StandardAnalyzer());
-        indexWriter = new IndexWriter(indexDir, config);
+        return new IndexWriter(indexDir, config);
     }
 
-    public void buildIndexes(String subfolder)
-    {
+    public void buildIndexes(String subfolder) throws IOException {
+        IndexWriter indexWriter = getIndexWriter(subfolder);
         JsonParser jsonParser = new JsonParser();
         File dir = new File(baseFolder+subfolder);
         File[] files = dir.listFiles();
@@ -46,24 +45,27 @@ public class Lucene {
                     try {
                         JsonObject jsonObject = (JsonObject) jsonParser.parse(new FileReader(jfile));
                         if(subfolder.equals("/venues/")) {
-                            indexVenue(jsonObject);
+                            indexVenue(indexWriter, jsonObject);
                         }
                         if (subfolder.equals("/events/")) {
-                            indexEvent(jsonObject);
+                            indexEvent(indexWriter, jsonObject);
                         }
                     } catch (FileNotFoundException e) {
                         e.printStackTrace();
                     }
                 }
             }
+        } else {
+            System.out.println("No files found");
         }
+        indexWriter.close();
     }
 
-    public void indexVenue(JsonObject venue){
+    public void indexVenue(IndexWriter indexWriter, JsonObject venue){
         System.out.println("Indexing venue " + venue.getAsJsonPrimitive("name").toString());
     }
 
-    public void indexEvent(JsonObject event){
+    public void indexEvent(IndexWriter indexWriter, JsonObject event){
         System.out.println("Indexing event " + event.getAsJsonPrimitive("name").toString());
     }
 
