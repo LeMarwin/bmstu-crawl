@@ -1,5 +1,7 @@
 package com.company;
 
+import org.apache.lucene.document.Document;
+
 import java.time.LocalDateTime;
 
 /**
@@ -22,6 +24,15 @@ public class Event {
 
     public Event(){
 
+    }
+
+    public Event(Document doc) {
+        this.name = doc.get("name");
+        this.eventURL = doc.get("eventURL");
+        this.venue = doc.get("venue");
+        this.venueURL = doc.get("venueURL");
+        this.category = Event.categoryFromString(doc.get("category"));
+        this.time = LocalDateTime.parse(doc.get("time"));
     }
 
     public Event(String name, String eventURL, LocalDateTime time, String venue, String venueURL, Category category){
@@ -54,13 +65,14 @@ public class Event {
 
     public static Category categoryFromString(String category)
     {
-        if(category.equals("concerts") || category.equals("Концерт"))
+        String lowcat = category.toLowerCase();
+        if(lowcat.equals("concerts") || lowcat.equals("Концерт"))
             return Category.CONCERT;
-        if(category.equals("theatre") || category.equals("Театр"))
+        if(lowcat.equals("theatre") || lowcat.equals("Театр"))
             return Category.THEATRE;
-        if(category.equals("sport") || category.equals("Спорт"))
+        if(lowcat.equals("sport") || lowcat.equals("Спорт"))
             return Category.SPORT;
-        if(category.equals("festivals") || category.equals("Фестиваль"))
+        if(lowcat.equals("festivals") || lowcat.equals("Фестиваль"))
             return Category.FESTIVAL;
         return Category.NONE;
     }
