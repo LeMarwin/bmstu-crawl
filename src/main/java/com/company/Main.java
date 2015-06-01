@@ -1,10 +1,18 @@
 package com.company;
 
+import org.apache.lucene.analysis.ru.RussianAnalyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
+import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.queryparser.classic.ParseException;
+import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.store.FSDirectory;
 
+import javax.management.Query;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,29 +50,24 @@ public class Main {
     }
 
     private static void runIndexing() {
-        Lucene lucene = new Lucene("output");
+        Lucene lucene = new Lucene();
         try {
             lucene.buildIndexes("/venues/");
-            lucene = new Lucene("output");
+            lucene = new Lucene();
             lucene.buildIndexes("/events/");
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private static void runSearch()
-    {
+    private static void runSearch() {
         try {
-            Search search = new Search("output/venues/index");
-            TopDocs topDocs = search.performSearch("ЦДК*", 5);
-            // obtain the ScoreDoc (= documentID, relevanceScore) array from topDocs
-            ScoreDoc[] hits = topDocs.scoreDocs;
-            // retrieve each matching document from the ScoreDoc array
-            System.out.println(hits.length);
-            for (int i = 0; i < hits.length; i++) {
-                Document doc = Search.getDocument(hits[i].doc);
-                String theatreRep = doc.get("name");
-                System.out.println(theatreRep);
+            Search searcher = new Search("/output/events/index");
+            TopDocs res = searcher.performSearch("Volta",10);
+            System.out.println(res.totalHits);
+            for (ScoreDoc hit : res.scoreDocs) {
+                Document doc = searcher.getDocument(hit.doc);
+                System.out.println(doc.get("name"));
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -72,5 +75,4 @@ public class Main {
             e.printStackTrace();
         }
     }
-
 }

@@ -25,19 +25,21 @@ import java.time.Month;
  * Index building via Lucene framework
  */
 public class Lucene {
-    public Lucene(String baseFolder) {
-        this.baseFolder = baseFolder;
-    }
-
-    private String baseFolder;
-
+    public Lucene() {
+      }
 
     private IndexWriter indexWriter = null;
 
     public IndexWriter getIndexWriter(boolean create, String subfolder) throws IOException {
         if (indexWriter == null) {
-            Directory indexDir = FSDirectory.open(new File(baseFolder + subfolder + "/index/").toPath());
+            Directory indexDir = FSDirectory.open(new File(System.getProperty("user.dir")
+                    + "/output" + subfolder + "/index/").toPath());
             IndexWriterConfig config = new IndexWriterConfig(new StandardAnalyzer());
+            if(create) {
+                config.setOpenMode(IndexWriterConfig.OpenMode.CREATE);
+            } else {
+                config.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
+            }
             indexWriter = new IndexWriter(indexDir, config);
         }
         return indexWriter;
@@ -51,7 +53,8 @@ public class Lucene {
 
     public void buildIndexes(String subfolder) throws IOException {
         indexWriter = getIndexWriter(true,subfolder);
-        File dir = new File(baseFolder+subfolder);
+        File dir = new File(System.getProperty("user.dir")
+                + "/output" + subfolder);
         File[] files = dir.listFiles();
         if(files!=null) {
             for (File jfile : files)
@@ -61,7 +64,7 @@ public class Lucene {
                     Object element = new JSONObject(FileUtils.readFileToString(jfile));
                     JSONObject jsonObject = (JSONObject) element;
                     System.out.println("Indexing " + subfolder + " " + jsonObject.getString("name"));
-                    indexObject(indexWriter,jsonObject);
+                    indexObject(jsonObject);
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -72,7 +75,7 @@ public class Lucene {
         closeIndexWriter();
     }
 
-    public void indexObject(IndexWriter indexWriter, JSONObject jsonObject) throws JSONException, IOException {
+    public void indexObject(JSONObject jsonObject) throws JSONException, IOException {
         Document doc = new Document();
         String fullSearchableText = "";
         for(int i = 0; i<jsonObject.names().length();i++)
@@ -86,14 +89,23 @@ public class Lucene {
             }
             else {
                 value = (String) object;                                //Но если очень надо...
-                if(!key.equals("description")) {
-                    fullSearchableText = fullSearchableText + value;
+                if(key.equals("name")||key.equals("address")||key.equals("venue")) {
+                    fullSearchableText = fullSearchableText + " " + value;
                 }
             }
             doc.add(new StringField(key, value, Field.Store.YES));
-            System.out.println(key + "\t" + value);
+            //System.out.println(key + "\t" + value);
         }
         doc.add(new TextField("content",fullSearchableText,Field.Store.NO));
+        System.out.println(fullSearchableText);
+        /*String value;
+        value = jsonObject.getString("name");
+        doc.add(new StringField("name", value,Field.Store.YES));
+        value = jsonObject.getString("address");
+        doc.add(new StringField("address", value,Field.Store.YES));
+        value = jsonObject.getString("name") + " " + jsonObject.getString("address");
+        System.out.println(value);
+        doc.add(new TextField("content", value,Field.Store.NO));*/
         indexWriter.addDocument(doc);
     }
 
