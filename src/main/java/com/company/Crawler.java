@@ -1,20 +1,19 @@
 package com.company;
 
 import com.google.gson.Gson;
+import org.apache.cxf.jaxrs.client.JAXRSClientFactory;
+import org.json.*;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.jsoup.nodes.Attribute;
 import org.jsoup.select.Elements;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.jar.Attributes;
 
 /**
  * Created by lemarwin on 01.06.15.
@@ -32,24 +31,46 @@ public class Crawler {
 
     private String mainDomain = "http://ponominalu.ru";
 
+
+    private String requestLatLong(String address){
+        YandexGeocode coder = JAXRSClientFactory.create("https://geocode-maps.yandex.ru/1.x/", YandexGeocode.class);
+        String response = coder.getGeoinfo(address, "json");
+        String coords = "";
+        JSONObject obj;
+        try {
+            obj = new JSONObject(response);
+            JSONArray arr = obj.getJSONObject("response").getJSONObject("GeoObjectCollection").getJSONArray("featureMember");
+            if(arr.length() > 0) {
+                JSONObject first = arr.getJSONObject(0).getJSONObject("GeoObject");
+                coords = first.getJSONObject("Point").getString("pos");
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return coords;
+    }
+
     public void crawlCategory(String cat, Integer pages, String outputFolder) {
         new File(outputFolder + "/venues/").mkdirs();
         new File(outputFolder + "/events/").mkdirs();
         Document doc = null;
+
         for (Integer pageCount = 1; pageCount <= pages; pageCount++) {
             try {
-                doc = Jsoup.connect(mainDomain + "/category/" + cat + "?page=" + pageCount.toString()).timeout(10000).get();
+                doc = Jsoup.connect(mainDomain + "/category/" + cat +
+                        "?page=" + pageCount.toString()).timeout(10000).get();
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            Elements venueNodes = null;
+            Elements venueNodes;
             if (doc != null) {
                 venueNodes = doc.select(".eventVenue > a");
                 Elements eventNodes = doc.select(".eventTitle > a");
                 Gson gson = new Gson();
                 for (Element el : venueNodes) {
                     Venue venue = parseVenue(mainDomain + el.attr("href"));
-                    if (venue != null) {
+                    if(venue!=null) {
+                        venue.setLatLong(requestLatLong(venue.getAddress()));
                         try {
                             PrintWriter writer = new PrintWriter(outputFolder +
                                     "/venues/" + venueCount.toString() + ".json", "UTF-8");

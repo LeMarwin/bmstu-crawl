@@ -50,6 +50,7 @@ public class Venue {
     private String description;
     private String venueUrl;
     private String workTime;
+    private String latLong;
 
     public Venue(){
 
@@ -63,4 +64,21 @@ public class Venue {
         this.workTime = workTime;
     }
 
+    public String getLatLong() {
+        return latLong;
+    }
+
+    public void setLatLong(String latlong) {
+        this.latLong = latlong;
+    }
+
+    public void print()
+    {
+        System.out.println("name \t" + name);
+        System.out.println("address \t" + address);
+        System.out.println("venueUrl \t" + venueUrl);
+        System.out.println("workTime \t" + workTime);
+        System.out.println("latLong \t" + latLong);
+        System.out.println("description \t" + description);
+    }
 }
